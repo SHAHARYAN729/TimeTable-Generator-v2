@@ -240,7 +240,7 @@ json generateTimetable(string excel_file, int num_slots, int capacity)
 
     // Construct the command to run the Python script with arguments
     string json_file = "output.json";
-    string command = "python ../convertExcelToJSON.py ./uploads/" + excel_file + " " + json_file;
+    string command = "python3 ../convertExcelToJSON.py ./uploads/" + excel_file + " " + json_file;
     int result = system(command.c_str());
 
     // Open the JSON file
