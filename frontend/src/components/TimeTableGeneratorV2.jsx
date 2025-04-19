@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Download, FileSpreadsheet, Clock, Users, AlertTriangle, RefreshCw, Calendar, BookOpen, CircleCheckBig } from "lucide-react"
 import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000"
 
 export default function TimeTableGenerator() {
   // 1. Add a new state for tracking file upload status
@@ -79,7 +80,7 @@ export default function TimeTableGenerator() {
       formData.append("file", selectedFile)
 
       // Send the file to the upload endpoint
-      const response = await fetch("http://localhost:3000/upload", {
+      const response = await fetch(`${BACKEND_URL}/upload`, {
         method: "POST",
         body: formData,
       })
@@ -118,7 +119,7 @@ export default function TimeTableGenerator() {
     setError(null)
 
     try {
-      const response = await fetch("http://localhost:3000/generate", {
+      const response = await fetch(`${BACKEND_URL}/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -155,7 +156,7 @@ export default function TimeTableGenerator() {
     setError(null)
 
     try {
-      const response = await fetch("http://localhost:3000/available_positions", {
+      const response = await fetch(`${BACKEND_URL}/available_positions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -231,7 +232,7 @@ export default function TimeTableGenerator() {
     }
 
     try {
-      const response = await fetch("http://localhost:3000/swap", {
+      const response = await fetch(`${BACKEND_URL}/swap`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
