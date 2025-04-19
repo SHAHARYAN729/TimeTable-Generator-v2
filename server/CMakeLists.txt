@@ -1,6 +1,6 @@
 # At the very top of CMakeLists.txt
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-  set(CMAKE_TOOLCHAIN_FILE "C:\Users\shaha\OneDrive\Desktop\MyCrowProject\vcpkg\scripts\buildsystems\vcpkg.cmake" CACHE STRING "")
+  set(CMAKE_TOOLCHAIN_FILE "D:\MyCrowProject\server\vcpkg\scripts\buildsystems\vcpkg.cmake" CACHE STRING "")
 endif()
 
 cmake_minimum_required(VERSION 3.15)

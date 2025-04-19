@@ -709,43 +709,45 @@ json getAvailablePositions(const string& courseName) {
     return response;
 }
 
-int main() {
-    crow::SimpleApp app;
-    
-    // CORS middleware
-    auto cors = [](const crow::request& req, crow::response& res) {
+struct CORS {
+    struct context {};
+
+    void before_handle(crow::request& req, crow::response& res, context&) {
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
-    };
-    
-    // Middleware to handle CORS preflight requests
-    app.route_dynamic("/")
-        .methods("OPTIONS"_method)
-        ([](const crow::request& req) {
-            crow::response res;
-            res.set_header("Access-Control-Allow-Origin", "*");
-            res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-            res.set_header("Access-Control-Allow-Headers", "Content-Type");
-            res.code = 204;  // No content for preflight response
-            return res;
-        });
-    
-    // Define the route for generating a timetable
+
+        if (req.method == crow::HTTPMethod::Options) {
+            res.code = 204;
+            res.end();
+        }
+    }
+
+    void after_handle(crow::request&, crow::response& res, context&) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+    }
+};
+
+
+int main() {
+    crow::App<CORS> app;
+
+    // === /generate ===
     CROW_ROUTE(app, "/generate")
         .methods("POST"_method)
-        ([&](const crow::request& req) {
+        ([](const crow::request& req) {
             crow::response res;
-            cors(req, res);
-            
+
             try {
-                // Parse request body
                 json body = json::parse(req.body);
-                
                 string excelFile = body["excel_file"].get<string>();
                 int numSlots = body["slots"].get<int>();
                 int capacity = body["capacity"].get<int>();
-                cout<<excelFile<<" "<<numSlots<<" "<<capacity<<"\n";
+
+                cout << excelFile << " " << numSlots << " " << capacity << "\n";
+
                 json result = generateTimetable(excelFile, numSlots, capacity);
                 res.write(result.dump(4));
                 res.code = 200;
@@ -756,25 +758,22 @@ int main() {
                 res.write(error.dump(4));
                 res.code = 400;
             }
-            
+
             res.set_header("Content-Type", "application/json");
             return res;
         });
-    
-    // Define the route for swapping elements in the timetable
+
+    // === /swap ===
     CROW_ROUTE(app, "/swap")
         .methods("POST"_method)
-        ([&](const crow::request& req) {
+        ([](const crow::request& req) {
             crow::response res;
-            cors(req, res);
-            
+
             try {
-                // Parse request body
                 json body = json::parse(req.body);
-                
                 int swapType = body["swap_type"].get<int>();
                 json params = body["params"];
-                
+
                 json result = swapTimetable(swapType, params);
                 res.write(result.dump(4));
                 res.code = 200;
@@ -785,24 +784,21 @@ int main() {
                 res.write(error.dump(4));
                 res.code = 400;
             }
-            
+
             res.set_header("Content-Type", "application/json");
             return res;
         });
-    
-    // Define the route for getting available positions for a course
+
+    // === /available_positions ===
     CROW_ROUTE(app, "/available_positions")
         .methods("POST"_method)
-        ([&](const crow::request& req) {
+        ([](const crow::request& req) {
             crow::response res;
-            cors(req, res);
-            
+
             try {
-                // Parse request body
                 json body = json::parse(req.body);
-                
                 string courseName = body["course"].get<string>();
-                
+
                 json result = getAvailablePositions(courseName);
                 res.write(result.dump(4));
                 res.code = 200;
@@ -813,13 +809,15 @@ int main() {
                 res.write(error.dump(4));
                 res.code = 400;
             }
-            
+
             res.set_header("Content-Type", "application/json");
             return res;
         });
-    
-    // Start the server
+
+    // Start server
     app.port(3000).multithreaded().run();
+
+    return 0;
     
     return 0;
 }
