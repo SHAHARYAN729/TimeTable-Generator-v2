@@ -43,6 +43,7 @@ vector<vector<int>> bestSchedule;
 int courseCnt;
 int slots;
 int days;
+int holiday = -1;
 // Changed from fixed arrays to vectors for MSVC compatibility
 vector<vector<int>> adj;   // was int adj[21][21]
 vector<vector<int>> clash; // was int clash[21][21]
@@ -133,6 +134,10 @@ json calculateClashes()
         }
         for (int j = 3; j < sze; j++)
         {
+            if (v[j] == 2 * holiday + 1)
+                continue;
+            if (v[j - 3] == 2 * holiday)
+                continue;
             if (v[j] % 2 == 1 && v[j] == v[j - 3] + 3)
             {
                 studentClash4.insert(student);
@@ -156,11 +161,13 @@ json calculateClashes()
         for (auto &entry : twoExam)
         {
             int F = 0;
+            if (entry == holiday)
+                continue;
             for (auto &j : oneExam)
             {
-                if (entry == j + 1)
+                if (entry == j + 1 && j + 1 != holiday)
                     F = 1;
-                if (entry == j - 1)
+                if (entry == j - 1 && j - 1 != holiday)
                     F = 1;
             }
             if (F)
@@ -223,11 +230,50 @@ json formatSchedule()
     return schedule;
 }
 
+// Helper function to generate student report
+json generateReport()
+{
+    json report = json::array();
+
+    unordered_map<int, int> bestCourseClique;
+    for (int i = 0; i < slots; i++)
+    {
+        for (auto &j : bestSchedule[i])
+        {
+            bestCourseClique[j] = i;
+        }
+    }
+
+    for (auto &studentEntry : studentCourse)
+    {
+        json studentReport;
+        studentReport["student_id"] = studentEntry.first;
+
+        json schedule = json::array();
+        for (int j = 0; j < slots; j++)
+        {
+            schedule.push_back("-");
+        }
+
+        for (auto &courseNum : studentEntry.second)
+        {
+            int cliq = bestCourseClique[courseNum];
+            schedule[cliq] = numberCourse[courseNum];
+        }
+
+        studentReport["schedule"] = schedule;
+        report.push_back(studentReport);
+    }
+
+    return report;
+}
+
 // Generate initial timetable
-json generateTimetable(string excel_file, int num_slots, int capacity)
+json generateTimetable(string excel_file, int num_slots, int capacity, int holiday_day = -1)
 {
     slots = num_slots;
     days = slots / 2;
+    holiday = holiday_day;
 
     // Reset global variables
     course.clear();
@@ -681,6 +727,7 @@ json generateTimetable(string excel_file, int num_slots, int capacity)
     response["min_slots"] = minSlots;
     response["schedule"] = formatSchedule();
     response["clashes"] = calculateClashes();
+    response["report"] = generateReport();
 
     return response;
 }
@@ -802,6 +849,14 @@ json swapTimetable(int swap_type, const json &params)
         swap(bestSchedule[idx1], bestSchedule[idx2]);
         swap(bestSchedule[idx1 + 1], bestSchedule[idx2 + 1]);
     }
+    // Type 5: Add extra day
+    else if (swap_type == 5)
+    {
+        bestSchedule.push_back(vector<int>());
+        bestSchedule.push_back(vector<int>());
+        slots += 2;
+        days += 1;
+    }
     else
     {
         json error;
@@ -815,6 +870,7 @@ json swapTimetable(int swap_type, const json &params)
     response["status"] = "success";
     response["schedule"] = formatSchedule();
     response["clashes"] = calculateClashes();
+    response["report"] = generateReport();
 
     return response;
 }
@@ -899,10 +955,11 @@ int main()
                 string excelFile = body["excel_file"].get<string>();
                 int numSlots = body["slots"].get<int>();
                 int capacity = body["capacity"].get<int>();
+                int holidayDay = body.contains("holiday") ? body["holiday"].get<int>() : -1;
 
                 cout << excelFile << " " << numSlots << " " << capacity << "\n";
 
-                json result = generateTimetable(excelFile, numSlots, capacity);
+                json result = generateTimetable(excelFile, numSlots, capacity, holidayDay);
                 res.write(result.dump(4));
                 res.code = 200;
             } catch (const exception& e) {

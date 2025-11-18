@@ -1,122 +1,133 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { Download, FileSpreadsheet, Clock, Users, AlertTriangle, RefreshCw, Calendar, BookOpen, CircleCheckBig } from "lucide-react"
-import ExcelJS from "exceljs"
-import { saveAs } from "file-saver"
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000"
+import { useState, useRef, useEffect } from "react";
+import {
+  Download,
+  FileSpreadsheet,
+  Clock,
+  Users,
+  AlertTriangle,
+  RefreshCw,
+  Calendar,
+  BookOpen,
+  CircleCheckBig,
+} from "lucide-react";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
 export default function TimeTableGenerator() {
   // 1. Add a new state for tracking file upload status
-  const [uploadLoading, setUploadLoading] = useState(false)
-  const [uploadError, setUploadError] = useState(null)
-  const [uploadSuccess, setUploadSuccess] = useState(false)
-  const [activeTab, setActiveTab] = useState("generate")
-  const [loading, setLoading] = useState(false)
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState("generate");
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     excel_file: "",
     slots: 20,
     capacity: 1000,
-  })
-  const [selectedFile, setSelectedFile] = useState(null)
-  const [timetableData, setTimetableData] = useState(null)
-  const [error, setError] = useState(null)
-  const [swapType, setSwapType] = useState(1)
-  const [courseList, setCourseList] = useState([])
-  const [courseSlotMap, setCourseSlotMap] = useState({})
-  const [selectedCourse, setSelectedCourse] = useState("")
-  const [availableSlots, setAvailableSlots] = useState([])
-  const [newSlot, setNewSlot] = useState("")
-  const [slot1, setSlot1] = useState("")
-  const [slot2, setSlot2] = useState("")
-  const [day1, setDay1] = useState("")
-  const [day2, setDay2] = useState("")
-  const fileInputRef = useRef(null)
+    holiday: -1,
+  });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [timetableData, setTimetableData] = useState(null);
+  const [error, setError] = useState(null);
+  const [swapType, setSwapType] = useState(1);
+  const [courseList, setCourseList] = useState([]);
+  const [courseSlotMap, setCourseSlotMap] = useState({});
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [newSlot, setNewSlot] = useState("");
+  const [slot1, setSlot1] = useState("");
+  const [slot2, setSlot2] = useState("");
+  const [day1, setDay1] = useState("");
+  const [day2, setDay2] = useState("");
+  const fileInputRef = useRef(null);
 
   // Extract course list from timetable data
   useEffect(() => {
     if (timetableData && timetableData.schedule) {
-      const courses = timetableData.schedule.flatMap((slot) => slot.courses)
-      setCourseList([...new Set(courses)].sort())
+      const courses = timetableData.schedule.flatMap((slot) => slot.courses);
+      setCourseList([...new Set(courses)].sort());
 
-      const slotMap = {}
+      const slotMap = {};
       timetableData.schedule.forEach((slot) => {
         slot.courses.forEach((course) => {
-          slotMap[course] = slot.slot_number
-        })
-      })
-      setCourseSlotMap(slotMap)
+          slotMap[course] = slot.slot_number;
+        });
+      });
+      setCourseSlotMap(slotMap);
     }
-  }, [timetableData])
+  }, [timetableData]);
 
   // 2. Replace the handleFileChange function with this updated version
   const handleFileChange = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files[0];
     if (file) {
-      setSelectedFile(file)
+      setSelectedFile(file);
       // Reset form data and upload states
       setFormData({
         ...formData,
         excel_file: "", // Clear the excel_file field until upload is complete
-      })
-      setUploadError(null)
-      setUploadSuccess(false)
+      });
+      setUploadError(null);
+      setUploadSuccess(false);
     }
-  }
+  };
 
   // 3. Add a new function to handle file upload
   const handleFileUpload = async () => {
     if (!selectedFile) {
-      setUploadError("Please select a file first")
-      return
+      setUploadError("Please select a file first");
+      return;
     }
 
-    setUploadLoading(true)
-    setUploadError(null)
+    setUploadLoading(true);
+    setUploadError(null);
 
     try {
       // Create FormData and append file
-      const formData = new FormData()
-      formData.append("file", selectedFile)
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
       // Send the file to the upload endpoint
       const response = await fetch(`${BACKEND_URL}/upload`, {
         method: "POST",
         body: formData,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`)
+        throw new Error(`Upload failed: ${response.status}`);
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       // Update the form data with the returned filename
       setFormData((prev) => ({
         ...prev,
         excel_file: data.filename,
-      }))
+      }));
 
-      setUploadSuccess(true)
+      setUploadSuccess(true);
     } catch (err) {
-      setUploadError(err.message || "File upload failed")
-      console.error("Error uploading file:", err)
+      setUploadError(err.message || "File upload failed");
+      console.error("Error uploading file:", err);
     } finally {
-      setUploadLoading(false)
+      setUploadLoading(false);
     }
-  }
+  };
 
   // 4. Update the handleSubmit function to check for uploaded file
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!formData.excel_file) {
-      setError("Please upload a file first")
-      return
+      setError("Please upload a file first");
+      return;
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch(`${BACKEND_URL}/generate`, {
@@ -125,35 +136,40 @@ export default function TimeTableGenerator() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
+        throw new Error(`Error: ${response.status}`);
       }
 
-      const data = await response.json()
-      setTimetableData(data)
+      const data = await response.json();
+      setTimetableData(data);
     } catch (err) {
-      setError(err.message)
-      console.error("Error fetching timetable:", err)
+      setError(err.message);
+      console.error("Error fetching timetable:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData({
-      ...formData,
-      [name]: name === "slots" || name === "capacity" ? Number.parseInt(value) || 0 : value,
-    })
-  }
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === "slots" || name === "capacity" || name === "holiday"
+          ? value === ""
+            ? ""
+            : Number.parseInt(value) || 0
+          : value,
+    }));
+  };
 
   const fetchAvailableSlots = async () => {
-    if (!selectedCourse) return
+    if (!selectedCourse) return;
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch(`${BACKEND_URL}/available_positions`, {
@@ -164,71 +180,75 @@ export default function TimeTableGenerator() {
         body: JSON.stringify({
           course: selectedCourse,
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
+        throw new Error(`Error: ${response.status}`);
       }
 
-      const data = await response.json()
-      setAvailableSlots(data.available_slots || [])
-      setNewSlot(data.current_slot || "")
+      const data = await response.json();
+      setAvailableSlots(data.available_slots || []);
+      setNewSlot(data.current_slot || "");
     } catch (err) {
-      setError(err.message)
-      console.error("Error fetching available slots:", err)
+      setError(err.message);
+      console.error("Error fetching available slots:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSwap = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     const requestBody = {
       swap_type: swapType,
       params: {},
-    }
+    };
 
     switch (swapType) {
       case 1:
         if (!selectedCourse || !newSlot) {
-          setError("Please select a course and a new slot")
-          setLoading(false)
-          return
+          setError("Please select a course and a new slot");
+          setLoading(false);
+          return;
         }
         requestBody.params = {
           course: selectedCourse,
           new_slot: Number.parseInt(newSlot),
-        }
-        break
+        };
+        break;
       case 2:
         if (!slot1 || !slot2) {
-          setError("Please select both slots")
-          setLoading(false)
-          return
+          setError("Please select both slots");
+          setLoading(false);
+          return;
         }
         requestBody.params = {
           slot1: Number.parseInt(slot1),
           slot2: Number.parseInt(slot2),
-        }
-        break
+        };
+        break;
       case 3:
         if (!day1 || !day2) {
-          setError("Please select both days")
-          setLoading(false)
-          return
+          setError("Please select both days");
+          setLoading(false);
+          return;
         }
         requestBody.params = {
           day1: Number.parseInt(day1),
           day2: Number.parseInt(day2),
-        }
-        break
+        };
+        break;
+      case 5:
+        // No params needed for adding extra day
+        requestBody.params = {};
+        break;
       default:
-        setError("Invalid swap type")
-        setLoading(false)
-        return
+        setError("Invalid swap type");
+        setLoading(false);
+        return;
     }
 
     try {
@@ -238,58 +258,67 @@ export default function TimeTableGenerator() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
+        throw new Error(`Error: ${response.status}`);
       }
 
-      const data = await response.json()
-      setTimetableData(data)
+      const data = await response.json();
+      setTimetableData(data);
 
       // Reset form fields after successful swap
       if (swapType === 1) {
-        setSelectedCourse("")
-        setNewSlot("")
-        setAvailableSlots([])
+        setSelectedCourse("");
+        setNewSlot("");
+        setAvailableSlots([]);
       } else if (swapType === 2) {
-        setSlot1("")
-        setSlot2("")
+        setSlot1("");
+        setSlot2("");
       } else if (swapType === 3) {
-        setDay1("")
-        setDay2("")
+        setDay1("");
+        setDay2("");
       }
     } catch (err) {
-      setError(err.message)
-      console.error("Error performing swap:", err)
+      setError(err.message);
+      console.error("Error performing swap:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const downloadExcel = async () => {
-    if (!timetableData) return
+    if (!timetableData) return;
 
-    const workbook = new ExcelJS.Workbook()
-    const scheduleSheet = workbook.addWorksheet("Schedule")
-    const clashesSheet = workbook.addWorksheet("Clashes")
+    const workbook = new ExcelJS.Workbook();
+    const scheduleSheet = workbook.addWorksheet("Schedule");
+    const clashesSheet = workbook.addWorksheet("Clashes");
+    const reportSheet = workbook.addWorksheet("Student Reports");
 
     // Style settings
     const headerStyle = {
       font: { bold: true },
       alignment: { horizontal: "center" },
-      fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFB6D7A8" } }, // light green
-    }
+      fill: {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFB6D7A8" },
+      }, // light green
+    };
 
     // Add schedule headers
-    scheduleSheet.addRow(["Slot Number", "Courses", "Total Students"])
+    scheduleSheet.addRow(["Slot Number", "Courses", "Total Students"]);
     scheduleSheet.getRow(1).eachCell((cell) => {
-      Object.assign(cell, headerStyle)
-    })
+      Object.assign(cell, headerStyle);
+    });
 
     // Add schedule data with slot-based color coding
     timetableData.schedule.forEach((slot, index) => {
-      const row = scheduleSheet.addRow([slot.slot_number, slot.courses.join(", "), slot.total_students])
+      const row = scheduleSheet.addRow([
+        slot.slot_number,
+        slot.courses.join(", "),
+        slot.total_students,
+      ]);
 
       const bgColors = [
         "FFFFF2CC",
@@ -307,28 +336,36 @@ export default function TimeTableGenerator() {
         "FFA2C4C9",
         "FF76A5AF",
         "FF6AA84F",
-      ]
+      ];
 
-      const color = bgColors[index % bgColors.length]
+      const color = bgColors[index % bgColors.length];
       row.eachCell((cell) => {
         cell.fill = {
           type: "pattern",
           pattern: "solid",
           fgColor: { argb: color },
-        }
-        cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true }
-      })
-    })
+        };
+        cell.alignment = {
+          vertical: "middle",
+          horizontal: "left",
+          wrapText: true,
+        };
+      });
+    });
 
     // Add clashes headers
-    clashesSheet.addRow(["Clash Type", "Count", "Student IDs"])
+    clashesSheet.addRow(["Clash Type", "Count", "Student IDs"]);
     clashesSheet.getRow(1).eachCell((cell) => {
-      Object.assign(cell, headerStyle)
-    })
+      Object.assign(cell, headerStyle);
+    });
 
     // Add clash data
     const clashData = [
-      ["2 exams in a day", timetableData.clashes.clash2_count, timetableData.clashes.students_clash2.join(", ")],
+      [
+        "2 exams in a day",
+        timetableData.clashes.clash2_count,
+        timetableData.clashes.students_clash2.join(", "),
+      ],
       [
         "3 exams in 2 consecutive days",
         timetableData.clashes.clash3_count,
@@ -339,24 +376,43 @@ export default function TimeTableGenerator() {
         timetableData.clashes.clash4_count,
         timetableData.clashes.students_clash4.join(", "),
       ],
-    ]
+    ];
 
     clashData.forEach((row) => {
-      clashesSheet.addRow(row)
-    })
+      clashesSheet.addRow(row);
+    });
+
+    // Add student report data if available
+    if (timetableData.report && timetableData.report.length > 0) {
+      const reportHeaders = [
+        "Student ID",
+        ...timetableData.report[0].schedule.map((_, idx) => `Slot ${idx + 1}`),
+      ];
+      reportSheet.addRow(reportHeaders);
+      reportSheet.getRow(1).eachCell((cell) => {
+        Object.assign(cell, headerStyle);
+      });
+
+      timetableData.report.forEach((studentReport) => {
+        const row = [studentReport.student_id, ...studentReport.schedule];
+        reportSheet.addRow(row);
+      });
+
+      reportSheet.columns.forEach((column) => (column.width = 15));
+    }
 
     // Adjust column widths
-    scheduleSheet.columns.forEach((column) => (column.width = 30))
-    clashesSheet.columns.forEach((column) => (column.width = 40))
+    scheduleSheet.columns.forEach((column) => (column.width = 30));
+    clashesSheet.columns.forEach((column) => (column.width = 40));
 
     // Export file
-    const buffer = await workbook.xlsx.writeBuffer()
-    saveAs(new Blob([buffer]), "timetable.xlsx")
-  }
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), "timetable.xlsx");
+  };
   // Generate array of numbers from 1 to max
   const generateNumberArray = (max) => {
-    return Array.from({ length: max }, (_, i) => i + 1)
-  }
+    return Array.from({ length: max }, (_, i) => i + 1);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -389,12 +445,16 @@ export default function TimeTableGenerator() {
           <div className="p-6">
             {activeTab === "generate" ? (
               <div>
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">Timetable Generator</h1>
+                <h1 className="text-2xl font-bold text-gray-800 mb-6">
+                  Timetable Generator
+                </h1>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* 5. Replace the Excel File input section in the form with this updated version */}
                     <div className="space-y-2 col-span-3 md:col-span-1">
-                      <label className="block text-sm font-medium text-gray-700">Excel File</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Excel File
+                      </label>
                       <div className="space-y-3">
                         <div className="flex items-center">
                           <input
@@ -414,7 +474,9 @@ export default function TimeTableGenerator() {
                             Choose File
                           </button>
                           <span className="ml-3 text-sm text-gray-500 truncate max-w-xs">
-                            {selectedFile ? selectedFile.name : "No file selected"}
+                            {selectedFile
+                              ? selectedFile.name
+                              : "No file selected"}
                           </span>
                         </div>
 
@@ -455,23 +517,32 @@ export default function TimeTableGenerator() {
                           </button>
                         )}
 
-                        {uploadError && <div className="text-sm text-red-600">{uploadError}</div>}
+                        {uploadError && (
+                          <div className="text-sm text-red-600">
+                            {uploadError}
+                          </div>
+                        )}
 
                         {uploadSuccess && (
                           <div className="text-sm text-green-600 flex flex-col">
                             <div className="flex items-center justify-start">
-                            <CircleCheckBig className="w-4 h-4 mr-2"/>
-                            <span> File uploaded successfully! </span>
+                              <CircleCheckBig className="w-4 h-4 mr-2" />
+                              <span> File uploaded successfully! </span>
                             </div>
-                           
-                            <span className="font-medium ml-1 mt-1">Filename: {formData.excel_file}</span>
+
+                            <span className="font-medium ml-1 mt-1">
+                              Filename: {formData.excel_file}
+                            </span>
                           </div>
                         )}
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label htmlFor="slots" className="block text-sm font-medium text-gray-700">
+                      <label
+                        htmlFor="slots"
+                        className="block text-sm font-medium text-gray-700"
+                      >
                         Number of Slots
                       </label>
                       <div className="relative rounded-md shadow-sm">
@@ -486,13 +557,17 @@ export default function TimeTableGenerator() {
                           onChange={handleInputChange}
                           className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 sm:text-sm border-gray-300 rounded-md"
                           min="1"
+                          step="1"
                           required
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">
+                      <label
+                        htmlFor="capacity"
+                        className="block text-sm font-medium text-gray-700"
+                      >
                         Capacity
                       </label>
                       <div className="relative rounded-md shadow-sm">
@@ -507,9 +582,38 @@ export default function TimeTableGenerator() {
                           onChange={handleInputChange}
                           className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 sm:text-sm border-gray-300 rounded-md"
                           min="1"
+                          step="1"
                           required
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="holiday"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Holiday Day (Optional)
+                      </label>
+                      <div className="relative rounded-md shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Calendar className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          type="number"
+                          id="holiday"
+                          name="holiday"
+                          value={formData.holiday}
+                          onChange={handleInputChange}
+                          className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 sm:text-sm border-gray-300 rounded-md"
+                          min="-1"
+                          step="1"
+                          placeholder="-1 for no holiday"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Enter -1 for no holiday or day number (1, 2, 3...)
+                      </p>
                     </div>
                   </div>
 
@@ -553,7 +657,9 @@ export default function TimeTableGenerator() {
               </div>
             ) : (
               <div>
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">Swap Options</h1>
+                <h1 className="text-2xl font-bold text-gray-800 mb-6">
+                  Swap Options
+                </h1>
 
                 <div className="bg-gray-50 p-4 rounded-lg mb-6">
                   <div className="flex flex-wrap gap-2">
@@ -590,6 +696,17 @@ export default function TimeTableGenerator() {
                       <Calendar className="h-4 w-4 inline mr-1" />
                       Swap Two Days
                     </button>
+                    <button
+                      className={`px-4 py-2 text-sm font-medium rounded-md ${
+                        swapType === 5
+                          ? "bg-blue-100 text-blue-700 border border-blue-300"
+                          : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                      }`}
+                      onClick={() => setSwapType(5)}
+                    >
+                      <Calendar className="h-4 w-4 inline mr-1" />
+                      Add Extra Day
+                    </button>
                   </div>
                 </div>
 
@@ -598,13 +715,15 @@ export default function TimeTableGenerator() {
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Select Course</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Select Course
+                          </label>
                           <div className="relative z-10">
                             <select
                               value={selectedCourse}
                               onChange={(e) => {
-                                setSelectedCourse(e.target.value)
-                                setAvailableSlots([])
+                                setSelectedCourse(e.target.value);
+                                setAvailableSlots([]);
                               }}
                               className="block w-full pl-3 pr-10 py-2 text-base border border-gray-400 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             >
@@ -653,14 +772,19 @@ export default function TimeTableGenerator() {
                         </div>
                         {selectedCourse && courseSlotMap[selectedCourse] && (
                           <p className="text-sm  text-gray-600">
-                            Current Slot: <strong>Slot {courseSlotMap[selectedCourse]}</strong>
+                            Current Slot:{" "}
+                            <strong>
+                              Slot {courseSlotMap[selectedCourse]}
+                            </strong>
                           </p>
                         )}
                       </div>
 
                       {availableSlots.length > 0 && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Select New Slot</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Select New Slot
+                          </label>
                           <div className="relative z-10">
                             <select
                               value={newSlot}
@@ -690,12 +814,18 @@ export default function TimeTableGenerator() {
                           <div className="relative z-10">
                             <select
                               value={i === 0 ? slot1 : slot2}
-                              onChange={(e) => (i === 0 ? setSlot1(e.target.value) : setSlot2(e.target.value))}
+                              onChange={(e) =>
+                                i === 0
+                                  ? setSlot1(e.target.value)
+                                  : setSlot2(e.target.value)
+                              }
                               className="block w-full pl-3 pr-10 py-2 text-base border border-gray-400 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             >
                               <option value="">Select a slot</option>
                               {timetableData &&
-                                generateNumberArray(timetableData.schedule.length).map((num) => (
+                                generateNumberArray(
+                                  timetableData.schedule.length
+                                ).map((num) => (
                                   <option key={num} value={num}>
                                     Slot {num}
                                   </option>
@@ -717,7 +847,11 @@ export default function TimeTableGenerator() {
                           <div className="relative z-10">
                             <select
                               value={i === 0 ? day1 : day2}
-                              onChange={(e) => (i === 0 ? setDay1(e.target.value) : setDay2(e.target.value))}
+                              onChange={(e) =>
+                                i === 0
+                                  ? setDay1(e.target.value)
+                                  : setDay2(e.target.value)
+                              }
                               className="block w-full pl-3 pr-10 py-2 text-base border border-gray-400 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             >
                               <option value="">Select a day</option>
@@ -730,6 +864,15 @@ export default function TimeTableGenerator() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {swapType === 5 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                      <p className="text-sm text-blue-800">
+                        This will add 2 extra slots (1 additional day) to the
+                        timetable.
+                      </p>
                     </div>
                   )}
 
@@ -790,7 +933,9 @@ export default function TimeTableGenerator() {
         {timetableData && (
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
             <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-800">Timetable Results</h2>
+              <h2 className="text-xl font-bold text-gray-800">
+                Timetable Results
+              </h2>
               <button
                 onClick={downloadExcel}
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -802,9 +947,14 @@ export default function TimeTableGenerator() {
 
             <div className="p-6">
               <div className="mb-6">
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Schedule Summary</h3>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">
+                  Schedule Summary
+                </h3>
                 <p className="text-sm text-gray-600 mb-2">
-                  Minimum slots required: <span className="font-semibold">{timetableData.min_slots}</span>
+                  Minimum slots required:{" "}
+                  <span className="font-semibold">
+                    {timetableData.min_slots}
+                  </span>
                 </p>
                 <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -848,7 +998,9 @@ export default function TimeTableGenerator() {
                               ))}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{slot.total_students}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {slot.total_students}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -856,8 +1008,90 @@ export default function TimeTableGenerator() {
                 </div>
               </div>
 
+              {timetableData.report && timetableData.report.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">
+                    Student Reports
+                  </h3>
+                  <div className="collapse-panel">
+                    <details className="bg-gray-50 rounded-lg border border-gray-200">
+                      <summary className="cursor-pointer p-4 font-medium flex items-center justify-between">
+                        <span>
+                          View Individual Student Schedules (
+                          {timetableData.report.length} students)
+                        </span>
+                        <svg
+                          className="h-5 w-5 text-gray-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </summary>
+                      <div className="p-4 pt-0 bg-white border-t border-gray-200">
+                        <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                          <table className="min-w-full divide-y divide-gray-200 text-xs">
+                            <thead className="bg-gray-50 sticky top-0">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Student ID
+                                </th>
+                                {timetableData.report[0].schedule.map(
+                                  (_, idx) => (
+                                    <th
+                                      key={idx}
+                                      className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                      Slot {idx + 1}
+                                    </th>
+                                  )
+                                )}
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {timetableData.report.map((studentReport) => (
+                                <tr
+                                  key={studentReport.student_id}
+                                  className="hover:bg-gray-50"
+                                >
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900">
+                                    {studentReport.student_id}
+                                  </td>
+                                  {studentReport.schedule.map((course, idx) => (
+                                    <td
+                                      key={idx}
+                                      className="px-2 py-2 text-center text-xs text-gray-500"
+                                    >
+                                      {course === "-" ? (
+                                        <span className="text-gray-400">-</span>
+                                      ) : (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                          {course}
+                                        </span>
+                                      )}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              )}
+
               <div>
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Clash Information</h3>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">
+                  Clash Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
                     <div className="flex items-center">
@@ -865,8 +1099,12 @@ export default function TimeTableGenerator() {
                         <AlertTriangle className="h-5 w-5 text-yellow-600" />
                       </div>
                       <div className="ml-3">
-                        <h4 className="text-sm font-medium text-yellow-800">2 Exams in a Day</h4>
-                        <p className="text-sm text-yellow-700 mt-1">{timetableData.clashes.clash2_count} students</p>
+                        <h4 className="text-sm font-medium text-yellow-800">
+                          2 Exams in a Day
+                        </h4>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          {timetableData.clashes.clash2_count} students
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -877,8 +1115,12 @@ export default function TimeTableGenerator() {
                         <AlertTriangle className="h-5 w-5 text-orange-600" />
                       </div>
                       <div className="ml-3">
-                        <h4 className="text-sm font-medium text-orange-800">3 Exams in Two Consecutive Days</h4>
-                        <p className="text-sm text-orange-700 mt-1">{timetableData.clashes.clash3_count} students</p>
+                        <h4 className="text-sm font-medium text-orange-800">
+                          3 Exams in Two Consecutive Days
+                        </h4>
+                        <p className="text-sm text-orange-700 mt-1">
+                          {timetableData.clashes.clash3_count} students
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -889,8 +1131,12 @@ export default function TimeTableGenerator() {
                         <AlertTriangle className="h-5 w-5 text-red-600" />
                       </div>
                       <div className="ml-3">
-                        <h4 className="text-sm font-medium text-red-800">4 Exams in Two Consecutive Days</h4>
-                        <p className="text-sm text-red-700 mt-1">{timetableData.clashes.clash4_count} students</p>
+                        <h4 className="text-sm font-medium text-red-800">
+                          4 Exams in Two Consecutive Days
+                        </h4>
+                        <p className="text-sm text-red-700 mt-1">
+                          {timetableData.clashes.clash4_count} students
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -900,21 +1146,36 @@ export default function TimeTableGenerator() {
                   <div className="collapse-panel">
                     <details className="bg-gray-50 rounded-lg border border-gray-200">
                       <summary className="cursor-pointer p-4 font-medium flex items-center justify-between">
-                        <span>Students with 2 Exams in a Day ({timetableData.clashes.students_clash2.length})</span>
-                        <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <span>
+                          Students with 2 Exams in a Day (
+                          {timetableData.clashes.students_clash2.length})
+                        </span>
+                        <svg
+                          className="h-5 w-5 text-gray-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
                         </svg>
                       </summary>
                       <div className="p-4 pt-0 bg-white border-t border-gray-200">
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {timetableData.clashes.students_clash2.map((student) => (
-                            <span
-                              key={student}
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                            >
-                              {student}
-                            </span>
-                          ))}
+                          {timetableData.clashes.students_clash2.map(
+                            (student) => (
+                              <span
+                                key={student}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                              >
+                                {student}
+                              </span>
+                            )
+                          )}
                         </div>
                       </div>
                     </details>
@@ -924,22 +1185,35 @@ export default function TimeTableGenerator() {
                     <details className="bg-gray-50 rounded-lg border border-gray-200">
                       <summary className="cursor-pointer p-4 font-medium flex items-center justify-between">
                         <span>
-                          Students with 3 Exams in Two Consecutive Days ({timetableData.clashes.students_clash3.length})
+                          Students with 3 Exams in Two Consecutive Days (
+                          {timetableData.clashes.students_clash3.length})
                         </span>
-                        <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <svg
+                          className="h-5 w-5 text-gray-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
                         </svg>
                       </summary>
                       <div className="p-4 pt-0 bg-white border-t border-gray-200">
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {timetableData.clashes.students_clash3.map((student) => (
-                            <span
-                              key={student}
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                            >
-                              {student}
-                            </span>
-                          ))}
+                          {timetableData.clashes.students_clash3.map(
+                            (student) => (
+                              <span
+                                key={student}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                              >
+                                {student}
+                              </span>
+                            )
+                          )}
                         </div>
                       </div>
                     </details>
@@ -953,20 +1227,32 @@ export default function TimeTableGenerator() {
                             Students with 4 Exams in Two Consecutive Days (
                             {timetableData.clashes.students_clash4.length})
                           </span>
-                          <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          <svg
+                            className="h-5 w-5 text-gray-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
                           </svg>
                         </summary>
                         <div className="p-4 pt-0 bg-white border-t border-gray-200">
                           <div className="flex flex-wrap gap-2 mt-2">
-                            {timetableData.clashes.students_clash4.map((student) => (
-                              <span
-                                key={student}
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                              >
-                                {student}
-                              </span>
-                            ))}
+                            {timetableData.clashes.students_clash4.map(
+                              (student) => (
+                                <span
+                                  key={student}
+                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                                >
+                                  {student}
+                                </span>
+                              )
+                            )}
                           </div>
                         </div>
                       </details>
@@ -979,5 +1265,5 @@ export default function TimeTableGenerator() {
         )}
       </div>
     </div>
-  )
+  );
 }
